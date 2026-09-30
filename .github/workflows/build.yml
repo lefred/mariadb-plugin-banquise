@@ -1,0 +1,33 @@
+name: Build and package BANQUISE plugin
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: lefred/mariadb-plugin-ci/.github/workflows/build-plugin.yml@main
+    with:
+      plugin_name: banquise
+      plugin_directory: banquise
+      build_target: banquise
+      plugin_library: banquise.so
+
+      sdk_image: quay.io/lefred14/mariadb-plugin-build
+      mariadb_versions: |
+          13.0.2
+          13.1.1
+          
+      cmake_options: -DPLUGIN_DATE_EXTRA=DYNAMIC
+      test_suite: banquise
+      run_tests: false
+
