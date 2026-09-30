@@ -19,5 +19,5 @@ jobs:
     with:
        mariadb_versions: 74647
        test_suites: banquise
-       extra_packages_deb: libcurl-dev
+       extra_packages_deb: libcurl4-openssl-dev
        extra_packages_rpm: libcurl-devel
