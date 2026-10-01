@@ -295,10 +295,21 @@ static bool parse_catalog(const std::string &json,
       return false;
     }
     Repo_entry e;
+    std::string mysql_version;
+    if (!json_string_field(obj, len, "mariadb_version", &e.mariadb_version, false, error) ||
+        !json_string_field(obj, len, "mysql_version", &mysql_version, false, error))
+      return false;
+    if (e.mariadb_version.empty() == mysql_version.empty())
+    {
+      *error= "Catalog entry must specify exactly one non-empty mariadb_version or mysql_version";
+      return false;
+    }
+    // A signed repository may contain both MariaDB plugins and MySQL builds.
+    // MySQL builds (including components) must never reach the install path.
+    if (!mysql_version.empty()) continue;
     if (!json_string_field(obj, len, "name", &e.name, true, error) ||
         !json_string_field(obj, len, "repository", &e.repository, true, error) ||
         !json_string_field(obj, len, "version", &e.version, true, error) ||
-        !json_string_field(obj, len, "mariadb_version", &e.mariadb_version, true, error) ||
         !json_string_field(obj, len, "architecture", &e.architecture, true, error) ||
         !json_string_field(obj, len, "soname", &e.soname, true, error) ||
         !json_string_field(obj, len, "download_url", &e.download_url, true, error) ||
