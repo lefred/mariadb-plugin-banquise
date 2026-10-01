@@ -52,28 +52,6 @@ IF(BANQUISE_USE_WOLFSSL)
     LIST(APPEND BANQUISE_CRYPTO_SOURCES
       "${CMAKE_SOURCE_DIR}/extra/wolfssl/wolfssl/wolfcrypt/src/blake2b.c")
   ENDIF()
-  SET(BANQUISE_WOLFSSL_HAS_ED25519 OFF)
-  IF(EXISTS "${CMAKE_BINARY_DIR}/extra/wolfssl/user_settings.h")
-    FILE(READ "${CMAKE_BINARY_DIR}/extra/wolfssl/user_settings.h"
-      BANQUISE_WOLFSSL_SETTINGS)
-    IF(BANQUISE_WOLFSSL_SETTINGS MATCHES "#define[ \t]+HAVE_ED25519([ \t\r\n]|$)")
-      SET(BANQUISE_WOLFSSL_HAS_ED25519 ON)
-    ENDIF()
-  ENDIF()
-  SET(BANQUISE_WOLFCRYPT_SRCDIR
-    "${CMAKE_SOURCE_DIR}/extra/wolfssl/wolfssl/wolfcrypt/src")
-  IF(NOT BANQUISE_WOLFSSL_HAS_ED25519 AND
-     EXISTS "${BANQUISE_WOLFCRYPT_SRCDIR}/ed25519.c")
-    # MariaDB < 11.6 does not build Ed25519 into its bundled wolfSSL (it was
-    # added for PARSEC). Compile it here using the portable C implementation:
-    # NO_CURVED25519_X64 avoids needing fe_x25519_asm.S, which MariaDB only
-    # assembles when Ed25519 is enabled.
-    ADD_DEFINITIONS(-DHAVE_ED25519 -DNO_CURVED25519_X64)
-    LIST(APPEND BANQUISE_CRYPTO_SOURCES
-      "${BANQUISE_WOLFCRYPT_SRCDIR}/ed25519.c"
-      "${BANQUISE_WOLFCRYPT_SRCDIR}/fe_operations.c"
-      "${BANQUISE_WOLFCRYPT_SRCDIR}/ge_operations.c")
-  ENDIF()
   IF(TARGET wolfssl)
     SET(BANQUISE_CRYPTO_LIBRARY wolfssl)
   ELSEIF(SSL_LIBRARIES)
