@@ -24,6 +24,7 @@ jobs:
 
       sdk_image: quay.io/lefred14/mariadb-plugin-build
       mariadb_versions: |
+          11.4.13
           13.0.2
           13.1.1
           
