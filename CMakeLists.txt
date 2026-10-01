@@ -8,6 +8,8 @@ SET(PLUGIN_HEX_VERSION "0x000201")
 SET(PLUGIN_DESCRIPTION "Standalone Banquise signed-catalog service")
 SET(PLUGIN_LICENSE "PLUGIN_LICENSE_GPL")
 
+OPTION(BANQUISE_DEBUG_INFO "Include debug information in the Banquise plugin" OFF)
+
 INCLUDE(CheckIncludeFile)
 
 FIND_PACKAGE(CURL REQUIRED)
@@ -51,6 +53,28 @@ IF(BANQUISE_USE_WOLFSSL)
     ADD_DEFINITIONS(-DHAVE_BLAKE2 -DHAVE_BLAKE2B)
     LIST(APPEND BANQUISE_CRYPTO_SOURCES
       "${CMAKE_SOURCE_DIR}/extra/wolfssl/wolfssl/wolfcrypt/src/blake2b.c")
+  ENDIF()
+  SET(BANQUISE_WOLFSSL_HAS_ED25519 OFF)
+  IF(EXISTS "${CMAKE_BINARY_DIR}/extra/wolfssl/user_settings.h")
+    FILE(READ "${CMAKE_BINARY_DIR}/extra/wolfssl/user_settings.h"
+      BANQUISE_WOLFSSL_SETTINGS)
+    IF(BANQUISE_WOLFSSL_SETTINGS MATCHES "#define[ \t]+HAVE_ED25519([ \t\r\n]|$)")
+      SET(BANQUISE_WOLFSSL_HAS_ED25519 ON)
+    ENDIF()
+  ENDIF()
+  SET(BANQUISE_WOLFCRYPT_SRCDIR
+    "${CMAKE_SOURCE_DIR}/extra/wolfssl/wolfssl/wolfcrypt/src")
+  IF(NOT BANQUISE_WOLFSSL_HAS_ED25519 AND
+     EXISTS "${BANQUISE_WOLFCRYPT_SRCDIR}/ed25519.c")
+    # MariaDB < 11.6 does not build Ed25519 into its bundled wolfSSL (it was
+    # added for PARSEC). Compile it here using the portable C implementation:
+    # NO_CURVED25519_X64 avoids needing fe_x25519_asm.S, which MariaDB only
+    # assembles when Ed25519 is enabled.
+    ADD_DEFINITIONS(-DHAVE_ED25519 -DNO_CURVED25519_X64)
+    LIST(APPEND BANQUISE_CRYPTO_SOURCES
+      "${BANQUISE_WOLFCRYPT_SRCDIR}/ed25519.c"
+      "${BANQUISE_WOLFCRYPT_SRCDIR}/fe_operations.c"
+      "${BANQUISE_WOLFCRYPT_SRCDIR}/ge_operations.c")
   ENDIF()
   IF(TARGET wolfssl)
     SET(BANQUISE_CRYPTO_LIBRARY wolfssl)
@@ -106,6 +130,13 @@ ELSE()
   MESSAGE(FATAL_ERROR
     "Cannot build banquise: neither MARIADB_ADD_PLUGIN nor "
     "MYSQL_ADD_PLUGIN is available.")
+ENDIF()
+
+# Server builds may use RelWithDebInfo. Override inherited debug flags for this
+# plugin unless explicitly requested with -DBANQUISE_DEBUG_INFO=ON.
+IF(TARGET banquise AND NOT BANQUISE_DEBUG_INFO AND
+   CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+  TARGET_COMPILE_OPTIONS(banquise PRIVATE -g0)
 ENDIF()
 
 INCLUDE(CPack)
